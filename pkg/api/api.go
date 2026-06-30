@@ -1,12 +1,19 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http"
 	"time"
 )
 
 func Init() {
 	http.HandleFunc("/api/nextdate", nextDayHandler)
+	http.HandleFunc("/api/task", taskHandler)
+}
+
+func writeJSON(w http.ResponseWriter, data any) {
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	json.NewEncoder(w).Encode(data)
 }
 
 func nextDayHandler(w http.ResponseWriter, r *http.Request) {
@@ -33,4 +40,11 @@ func nextDayHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Write([]byte(next))
+}
+
+func taskHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		addTaskHandler(w, r)
+	}
 }
