@@ -1,11 +1,16 @@
 package db
 
+import (
+	"database/sql"
+	"time"
+)
+
 type Task struct {
-	ID      int64  `json:"id"      db:"id"`
-	Date    string `json:"date"    db:"date"`
-	Title   string `json:"title"   db:"title"`
-	Comment string `json:"comment" db:"comment"`
-	Repeat  string `json:"repeat"  db:"repeat"`
+	ID      int64  `json:"id,string" db:"id"`
+	Date    string `json:"date"       db:"date"`
+	Title   string `json:"title"      db:"title"`
+	Comment string `json:"comment"    db:"comment"`
+	Repeat  string `json:"repeat"     db:"repeat"`
 }
 
 func AddTask(task *Task) (int64, error) {
@@ -15,4 +20,44 @@ func AddTask(task *Task) (int64, error) {
 		return 0, err
 	}
 	return res.LastInsertId()
+}
+
+func Tasks(search string, limit int) ([]*Task, error) {
+	tasks := make([]*Task, 0)
+	var rows *sql.Rows
+	var err error
+
+	switch {
+	case search == "":
+		rows, err = DB.Query(
+			`SELECT id, date, title, comment, repeat FROM scheduler ORDER BY date LIMIT ?`, limit)
+	case isDateSearch(search):
+		t, _ := time.Parse("02.01.2006", search)
+		rows, err = DB.Query(
+			`SELECT id, date, title, comment, repeat FROM scheduler WHERE date = ? LIMIT ?`,
+			t.Format("20060102"), limit)
+	default:
+		like := "%" + search + "%"
+		rows, err = DB.Query(
+			`SELECT id, date, title, comment, repeat FROM scheduler WHERE title LIKE ? OR comment LIKE ? ORDER BY date LIMIT ?`,
+			like, like, limit)
+	}
+	if err != nil {
+		return tasks, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var t Task
+		if err = rows.Scan(&t.ID, &t.Date, &t.Title, &t.Comment, &t.Repeat); err != nil {
+			return tasks, err
+		}
+		tasks = append(tasks, &t)
+	}
+	return tasks, rows.Err()
+}
+
+func isDateSearch(s string) bool {
+	_, err := time.Parse("02.01.2006", s)
+	return err == nil
 }
