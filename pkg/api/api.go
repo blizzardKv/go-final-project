@@ -4,11 +4,14 @@ import (
 	"encoding/json"
 	"net/http"
 	"time"
+
+	"go_final_project/pkg/db"
 )
 
 func Init() {
 	http.HandleFunc("/api/nextdate", nextDayHandler)
 	http.HandleFunc("/api/task", taskHandler)
+	http.HandleFunc("/api/task/done", doneTaskHandler)
 	http.HandleFunc("/api/tasks", tasksHandler)
 }
 
@@ -45,7 +48,26 @@ func nextDayHandler(w http.ResponseWriter, r *http.Request) {
 
 func taskHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
+	case http.MethodGet:
+		getTaskHandler(w, r)
 	case http.MethodPost:
 		addTaskHandler(w, r)
+	case http.MethodPut:
+		editTaskHandler(w, r)
+	case http.MethodDelete:
+		deleteTaskHandler(w, r)
 	}
+}
+
+func deleteTaskHandler(w http.ResponseWriter, r *http.Request) {
+	id := r.FormValue("id")
+	if id == "" {
+		writeJSON(w, map[string]string{"error": "не указан идентификатор"})
+		return
+	}
+	if err := db.DeleteTask(id); err != nil {
+		writeJSON(w, map[string]string{"error": err.Error()})
+		return
+	}
+	writeJSON(w, map[string]any{})
 }
