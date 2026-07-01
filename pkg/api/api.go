@@ -9,10 +9,11 @@ import (
 )
 
 func Init() {
+	http.HandleFunc("/api/signin", signinHandler)
 	http.HandleFunc("/api/nextdate", nextDayHandler)
-	http.HandleFunc("/api/task", taskHandler)
-	http.HandleFunc("/api/task/done", doneTaskHandler)
-	http.HandleFunc("/api/tasks", tasksHandler)
+	http.HandleFunc("/api/task", auth(taskHandler))
+	http.HandleFunc("/api/task/done", auth(doneTaskHandler))
+	http.HandleFunc("/api/tasks", auth(tasksHandler))
 }
 
 func writeJSON(w http.ResponseWriter, data any) {
