@@ -31,10 +31,18 @@ func Init(dbFile string) error {
 
 	if install {
 		if _, err = db.Exec(schema); err != nil {
+			db.Close()
 			return err
 		}
 	}
 
 	DB = db
 	return nil
+}
+
+func Close() error {
+	if DB == nil {
+		return nil
+	}
+	return DB.Close()
 }

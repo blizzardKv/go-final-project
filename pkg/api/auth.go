@@ -16,6 +16,12 @@ type claims struct {
 	jwt.RegisteredClaims
 }
 
+var password string
+
+func initAuth() {
+	password = os.Getenv("TODO_PASSWORD")
+}
+
 func pwdHash(password string) string {
 	h := sha256.Sum256([]byte(password))
 	return hex.EncodeToString(h[:])
@@ -46,13 +52,12 @@ func validateToken(tokenStr, password string) bool {
 
 func auth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		pass := os.Getenv("TODO_PASSWORD")
-		if pass != "" {
+		if password != "" {
 			var tokenStr string
 			if cookie, err := r.Cookie("token"); err == nil {
 				tokenStr = cookie.Value
 			}
-			if !validateToken(tokenStr, pass) {
+			if !validateToken(tokenStr, password) {
 				http.Error(w, "Authentification required", http.StatusUnauthorized)
 				return
 			}
@@ -66,18 +71,17 @@ func signinHandler(w http.ResponseWriter, r *http.Request) {
 		Password string `json:"password"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSON(w, map[string]string{"error": err.Error()})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
-	pass := os.Getenv("TODO_PASSWORD")
-	if req.Password != pass {
-		writeJSON(w, map[string]string{"error": "неверный пароль"})
+	if req.Password != password {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "неверный пароль"})
 		return
 	}
-	token, err := signToken(pass)
+	token, err := signToken(password)
 	if err != nil {
-		writeJSON(w, map[string]string{"error": err.Error()})
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
-	writeJSON(w, map[string]string{"token": token})
+	writeJSON(w, http.StatusOK, map[string]string{"token": token})
 }

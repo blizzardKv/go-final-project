@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -13,6 +14,37 @@ func afterNow(date, now time.Time) bool {
 	d := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, time.UTC)
 	n := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
 	return d.After(n)
+}
+
+func nextDayHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	nowStr := r.FormValue("now")
+	dateStr := r.FormValue("date")
+	repeat := r.FormValue("repeat")
+
+	var now time.Time
+	if nowStr == "" {
+		now = time.Now()
+	} else {
+		var err error
+		now, err = time.Parse(DateFormat, nowStr)
+		if err != nil {
+			http.Error(w, "invalid now date", http.StatusBadRequest)
+			return
+		}
+	}
+
+	next, err := NextDate(now, dateStr, repeat)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.Write([]byte(next))
 }
 
 func NextDate(now time.Time, dstart string, repeat string) (string, error) {
